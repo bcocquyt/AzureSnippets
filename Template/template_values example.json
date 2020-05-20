@@ -1,0 +1,17 @@
+[
+    {
+        "Name":  "Global.KeyVault.Sku",
+        "Type":  "Manual",
+        "Value":  "standard"
+    },
+    {
+        "Name":  "Global.KeyVault.Family",
+        "Type":  "Manual",
+        "Value":  "A"
+    },
+    {
+        "Name":  "Global.Prefix",
+        "Type":  "Manual",
+        "Value":  "test-global-"
+    }
+]

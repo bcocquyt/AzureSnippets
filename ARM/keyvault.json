@@ -1,0 +1,86 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"name-prefix": {
+			"defaultValue": "",
+			"type": "string",
+			"metadata": {
+				"description": "Prefix for keyvault name"
+			}
+		},
+		"accessPolicies": {			
+			"type": "object",
+			"metadata": {
+				"description":"List of Policies to add"
+			}
+		},
+		"json-secret": {
+			"type": "string"
+		}
+	},
+	"functions": [
+	],
+	"variables": {
+		"keyVaultName-Without-Prefix": "vault",
+		"keyVaultName": "[concat(parameters('name-prefix'),variables('keyVaultName-Without-Prefix'))]",
+		"keyVaultResourceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+	},
+	"resources": [
+		{
+			"type": "Microsoft.KeyVault/vaults",
+			"apiVersion": "2018-02-14",
+			"name": "[variables('keyVaultName')]",
+			"location": "[resourceGroup().location]",
+			"tags": {
+				"displayName": "[variables('keyVaultName')]"
+			},
+			"properties": {
+				"enabledForDeployment": true,
+				"enabledForTemplateDeployment": true,
+				"enabledForDiskEncryption": true,
+				"tenantId": "[subscription().tenantId]",
+				"accessPolicies": "[parameters('accessPolicies').list]",
+				"sku": {
+					"name": "standard",
+					"family": "A"
+				}
+			},
+			"resources": [
+				{
+					"type": "secrets",
+					"name": "my-super-secret-secret",
+					"apiVersion": "2016-10-01",
+					"dependsOn": [
+						"[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+					],
+					"properties": {
+						"value": "secretValue"
+					}
+				},
+				
+				{
+					"type": "secrets",
+					"name": "my-super-secret-json-secret",
+					"apiVersion": "2016-10-01",
+					"dependsOn": [
+						"[variables('keyVaultResourceId')]"
+					],
+					"properties": {
+						"value": "[parameters('json-secret')]"
+					}
+				}
+			]
+		}
+	],
+	"outputs": {
+		"Global.KeyVault.Id": {
+			"type": "string",
+			"value": "[variables('keyVaultResourceId')]"
+		},
+		"Global.KeyVault.Name": {
+			"type": "string",
+			"value": "[variables('keyVaultName')]"
+		}
+	}
+}

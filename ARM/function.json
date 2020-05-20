@@ -1,0 +1,122 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"functionAppStorageAccountName": {
+			"type": "string"
+		},
+		"functionAppStorageAccountId": {
+			"type": "string"
+		},
+		"location": {
+			"type": "string",
+			"defaultValue": "[resourceGroup().location]"
+		},
+		"name-prefix": {
+			"defaultValue": "",
+			"type": "string",
+			"metadata": {
+				"description": "Common prefix for all resources to be created"
+			}
+		}
+	},
+	"functions": [
+	],
+	"variables": {
+		"functionAppName-Without-Prefix": "functions",
+		"functionAppName": "[concat(parameters('name-prefix'),variables('functionAppName-Without-Prefix'))]",
+		"functionAppResourceId": "[resourceId('Microsoft.Web/sites',variables('functionAppName'))]",
+		"serverfarmResourceId": "[resourceId('Microsoft.Web/serverfarms',variables('serverFarmName'))]",
+		"applicationInsightsName": "[variables('functionAppName')]",
+		"applicationInsightsResourceId": "[resourceId('microsoft.insights/components',variables('applicationInsightsName'))]",
+		"hostingPlanName": "[variables('functionAppName')]",
+		"serverFarmName":"[variables('hostingPlanName')]"
+	},
+	"resources": [
+		{
+			"type": "Microsoft.Web/serverfarms",
+			"apiVersion": "2018-02-01",
+			"name": "[variables('hostingPlanName')]",
+			"location": "[parameters('location')]",
+			"sku": {
+				"name": "Y1",
+				"tier": "Dynamic"
+			},
+			"properties": {
+				"name": "[variables('hostingPlanName')]",
+				"computeMode": "Dynamic"
+			}
+		},
+		{
+			"apiVersion": "2015-05-01",
+			"name": "[variables('applicationInsightsName')]",
+			"type": "microsoft.insights/components",
+			"location": "[parameters('location')]",
+			"kind": "string",
+			"tags": {
+			},
+			"properties": {
+				"ApplicationId": "[variables('applicationInsightsName')]",
+				"Application_Type": "web"
+			}
+		},
+		{
+			"name": "[variables('functionAppName')]",
+			"type": "Microsoft.Web/sites",
+			"apiVersion": "2018-11-01",
+			"location": "[resourceGroup().location]",
+			"kind": "functionapp",
+			"dependsOn": [
+				"[variables('serverfarmResourceId')]"
+			],
+			"identity": {
+				"type": "SystemAssigned"
+			},
+			"properties": {
+				"serverFarmId": "[variables('serverfarmResourceId')]",
+				"siteConfig": {
+					"appSettings": [
+						{
+							"name": "AzureWebJobsDashboard",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionAppStorageAccountName'), ';AccountKey=', listKeys(parameters('functionAppStorageAccountId'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "AzureWebJobsStorage",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionAppStorageAccountName'), ';AccountKey=', listKeys(parameters('functionAppStorageAccountId'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionAppStorageAccountName'), ';AccountKey=', listKeys(parameters('functionAppStorageAccountId'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "WEBSITE_CONTENTSHARE",
+							"value": "[toLower('functionName')]"
+						},
+						{
+							"name": "FUNCTIONS_EXTENSION_VERSION",
+							"value": "~3"
+						},
+						{
+							"name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+							"value": "[reference(variables('applicationInsightsResourceId'), '2015-05-01').InstrumentationKey]"
+						},
+						{
+							"name": "FUNCTIONS_WORKER_RUNTIME",
+							"value": "dotnet"
+						}
+					]
+				}
+			}
+		}
+	],
+	"outputs": {
+		"Global.FunctionApp.Id": {
+			"type": "string",
+			"value": "[variables('functionAppResourceId')]"
+		},
+		"Global.FunctionApp.PrincipalId": {
+			"type": "string",
+			"value": "[reference(variables('functionAppResourceId'), '2019-08-01', 'Full').identity.principalId]"
+		}
+	}
+}
